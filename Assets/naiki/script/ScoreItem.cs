@@ -1,25 +1,34 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class ScoreItem : MonoBehaviour
 {
+    [Header("獲得スコア")]
     [SerializeField] private int point = 1;
+
+    private bool isCollected = false;
+
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (isCollected)
         {
-            ScoreManager.instance.AddScore(point);
-            Destroy(gameObject);
+            return;
         }
-    }
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        if (!other.CompareTag("Player"))
+        {
+            return;
+        }
+
+        if (ScoreManager.instance == null)
+        {
+            Debug.LogError("Scene内にScoreManagerが存在しません。");
+            return;
+        }
+
+        isCollected = true;
+
+        ScoreManager.instance.AddScore(point);
+
+        Destroy(gameObject);
     }
 }

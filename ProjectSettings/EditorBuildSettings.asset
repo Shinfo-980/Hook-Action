@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/utibayasi/TitleScene.unity
+    path: Assets/togi/Scenes/TitleScene.unity
     guid: 5f646b6c0551c4c4b8bfb23b2bc66d29
   - enabled: 1
     path: Assets/utibayasi/GameScene_Test1.unity
