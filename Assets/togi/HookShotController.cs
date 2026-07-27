@@ -20,11 +20,7 @@ public class HookShotController : MonoBehaviour
 
     [Header("Player引き寄せ設定")]
     [SerializeField] private float pullSpeed = 15f;
-
-    // 壁からどの程度手前で停止するか
     [SerializeField] private float stopDistanceFromWall = 1.2f;
-
-    // 目的地にどこまで近づいたら停止扱いにするか
     [SerializeField] private float playerArrivalDistance = 0.1f;
 
     private PlayerInput playerInput;
@@ -68,12 +64,26 @@ public class HookShotController : MonoBehaviour
             MoveHookTip();
         }
 
-        if (isPlayerPulling)
+        /*
+         * フックが壁に刺さっている間、
+         * 左クリックを押している場合だけPlayerを引っ張る
+         */
+        if (isHookAttached)
         {
-            PullPlayer();
+            if (hookAction.IsPressed())
+            {
+                isPlayerPulling = true;
+                PullPlayer();
+            }
+            else
+            {
+                // 左クリックを離したら、その場で引き寄せ終了
+                isPlayerPulling = false;
+                ResetHook();
+            }
         }
 
-        if (isHookFlying || isHookAttached || isPlayerPulling)
+        if (isHookFlying || isHookAttached)
         {
             UpdateRope();
         }
@@ -86,8 +96,10 @@ public class HookShotController : MonoBehaviour
             return;
         }
 
-        // フックが何もしていないときだけ発射
-        if (!isHookFlying && !isHookAttached && !isPlayerPulling)
+        // フックが何もしていないときだけ発射できる
+        if (!isHookFlying &&
+            !isHookAttached &&
+            !isPlayerPulling)
         {
             FireHook();
         }
@@ -113,19 +125,18 @@ public class HookShotController : MonoBehaviour
             return;
         }
 
-        // フック先端が向かう位置
+        // フック先端が向かう場所
         hookTargetPosition = hit.point;
 
-        // Playerが最終的に向かう位置
-        // 壁の表面から法線方向へ少し離れた場所にする
+        // Playerが停止する場所
         playerTargetPosition =
             hit.point + hit.normal * stopDistanceFromWall;
 
-        // 発射時にHookTipを銃口位置へ合わせる
+        // HookTipを発射位置に合わせる
         hookTip.position = hookOrigin.position;
         hookTip.rotation = hookOrigin.rotation;
 
-        // Playerやカメラの動きから独立させる
+        // Playerやカメラから独立させる
         hookTip.SetParent(null, true);
 
         isHookFlying = true;
@@ -158,10 +169,15 @@ public class HookShotController : MonoBehaviour
 
             isHookFlying = false;
             isHookAttached = true;
-            isPlayerPulling = true;
+
+            /*
+             * ここではisPlayerPullingをtrueにしない。
+             * 左クリックが押されているかどうかは
+             * Update内で判定する。
+             */
+            isPlayerPulling = false;
 
             Debug.Log("フックが壁に到着");
-            Debug.Log("Player引き寄せ開始");
         }
     }
 
@@ -182,10 +198,9 @@ public class HookShotController : MonoBehaviour
             playerTargetPosition
         );
 
+        // 壁の手前まで到着したら終了
         if (distance <= playerArrivalDistance)
         {
-            isPlayerPulling = false;
-
             Debug.Log("Player引き寄せ完了");
 
             ResetHook();
