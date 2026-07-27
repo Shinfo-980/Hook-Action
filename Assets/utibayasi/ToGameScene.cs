@@ -1,22 +1,19 @@
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 public class ToGameScene : MonoBehaviour
 {
-    [SerializeField] private string GameScene;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    [SerializeField] private string gameScene;
 
-    // Update is called once per frame
     private void Update()
     {
-
-        if (Input.anyKeyDown)
+        if (Keyboard.current != null &&
+            Keyboard.current.anyKey.wasPressedThisFrame)
         {
-            SceneManager.LoadScene(GameScene);
+            Debug.Log("キー入力を検知");
+
+            SceneManager.LoadScene(gameScene);
         }
     }
 }
