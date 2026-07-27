@@ -1,35 +1,76 @@
-using TMPro;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class TimerManager : MonoBehaviour
 {
-    public TMP_Text timerText;
-    [SerializeField] public float time;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    [Header("Time")]
+    [SerializeField] private float time = 120f;
+
+    [Header("Digit Images")]
+    [SerializeField] private Image hundredsImage;
+    [SerializeField] private Image tensImage;
+    [SerializeField] private Image onesImage;
+
+    [Header("Number Sprites (0～9)")]
+    [SerializeField] private Sprite[] numberSprites = new Sprite[10];
+
+    [Header("Warning")]
+    [SerializeField] private Color normalColor = Color.white;
+    [SerializeField] private Color warningColor = Color.red;
+
+    private void Start()
     {
-       
+        UpdateTimerDisplay();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        if (time >= 0)
+        if (time > 0)
         {
             time -= Time.deltaTime;
-        }
-        if (time <= 10)
-        {
-            timerText.color = Color.red;
-            timerText.fontSize = 80;
-        }
-        else
-        {
-            timerText.color = Color.white;
-            timerText.fontSize = 60;    
+
+            if (time < 0)
+                time = 0;
         }
 
+        UpdateTimerDisplay();
+    }
 
-         timerText.text = Mathf.CeilToInt(time).ToString("00");
+    private void UpdateTimerDisplay()
+    {
+        int displayTime = Mathf.CeilToInt(time);
+
+        displayTime = Mathf.Clamp(displayTime, 0, 999);
+
+        int hundreds = displayTime / 100;
+        int tens = (displayTime / 10) % 10;
+        int ones = displayTime % 10;
+
+        hundredsImage.sprite = numberSprites[hundreds];
+        tensImage.sprite = numberSprites[tens];
+        onesImage.sprite = numberSprites[ones];
+
+        Color currentColor = (displayTime <= 10) ? warningColor : normalColor;
+
+        hundredsImage.color = currentColor;
+        tensImage.color = currentColor;
+        onesImage.color = currentColor;
+    }
+
+    public float GetTime()
+    {
+        return time;
+    }
+
+    public void SetTime(float value)
+    {
+        time = Mathf.Clamp(value, 0, 999);
+        UpdateTimerDisplay();
+    }
+
+    public void AddTime(float value)
+    {
+        time = Mathf.Clamp(time + value, 0, 999);
+        UpdateTimerDisplay();
     }
 }
