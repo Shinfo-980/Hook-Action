@@ -19,9 +19,13 @@ public class HookShotController : MonoBehaviour
     [SerializeField] private float hookArrivalDistance = 0.02f;
 
     [Header("Player引き寄せ設定")]
-    [SerializeField] private float pullSpeed = 15f;
+    [SerializeField] private float initialPullSpeed = 8f;
+    [SerializeField] private float maxPullSpeed = 30f;
+    [SerializeField] private float pullAcceleration = 12f;
     [SerializeField] private float stopDistanceFromWall = 1.2f;
     [SerializeField] private float playerArrivalDistance = 0.1f;
+
+    private float currentPullSpeed;
 
     private PlayerInput playerInput;
     private InputAction hookAction;
@@ -125,23 +129,22 @@ public class HookShotController : MonoBehaviour
             return;
         }
 
-        // フック先端が向かう場所
         hookTargetPosition = hit.point;
 
-        // Playerが停止する場所
         playerTargetPosition =
             hit.point + hit.normal * stopDistanceFromWall;
 
-        // HookTipを発射位置に合わせる
         hookTip.position = hookOrigin.position;
         hookTip.rotation = hookOrigin.rotation;
 
-        // Playerやカメラから独立させる
         hookTip.SetParent(null, true);
 
         isHookFlying = true;
         isHookAttached = false;
         isPlayerPulling = false;
+
+        // 引き寄せ速度を初期化
+        currentPullSpeed = initialPullSpeed;
 
         ropeLine.enabled = true;
 
@@ -183,12 +186,21 @@ public class HookShotController : MonoBehaviour
 
     private void PullPlayer()
     {
+        // 長押ししている間、徐々に加速する
+        currentPullSpeed += pullAcceleration * Time.deltaTime;
+
+        // 最大速度を超えないようにする
+        currentPullSpeed = Mathf.Min(
+            currentPullSpeed,
+            maxPullSpeed
+        );
+
         Vector3 currentPosition = transform.position;
 
         Vector3 movement = Vector3.MoveTowards(
             currentPosition,
             playerTargetPosition,
-            pullSpeed * Time.deltaTime
+            currentPullSpeed * Time.deltaTime
         ) - currentPosition;
 
         characterController.Move(movement);
@@ -198,7 +210,6 @@ public class HookShotController : MonoBehaviour
             playerTargetPosition
         );
 
-        // 壁の手前まで到着したら終了
         if (distance <= playerArrivalDistance)
         {
             Debug.Log("Player引き寄せ完了");
@@ -219,7 +230,9 @@ public class HookShotController : MonoBehaviour
         isHookAttached = false;
         isPlayerPulling = false;
 
-        // HookTipをHookOriginの子に戻す
+        // 次のフック用に速度を初期化
+        currentPullSpeed = initialPullSpeed;
+
         hookTip.SetParent(hookOrigin);
 
         hookTip.localPosition = Vector3.zero;
