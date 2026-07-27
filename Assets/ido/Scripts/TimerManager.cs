@@ -14,12 +14,22 @@ public class TimerManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        time -= Time.deltaTime;
-        timerText.text = Mathf.CeilToInt(time).ToString();
-
-        if(time <= 10)
+        if (time >= 0)
+        {
+            time -= Time.deltaTime;
+        }
+        if (time <= 10)
         {
             timerText.color = Color.red;
+            timerText.fontSize = 80;
         }
+        else
+        {
+            timerText.color = Color.white;
+            timerText.fontSize = 60;
+        }
+
+
+         timerText.text = Mathf.CeilToInt(time).ToString("00");
     }
 }
