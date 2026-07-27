@@ -26,7 +26,7 @@ public class TimerManager : MonoBehaviour
         else
         {
             timerText.color = Color.white;
-            timerText.fontSize = 60;
+            timerText.fontSize = 60;    
         }
 
 
