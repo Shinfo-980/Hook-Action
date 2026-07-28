@@ -2,6 +2,7 @@
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(PlayerInput))]
 public class PlayerMovement : MonoBehaviour
 {
     [Header("移動速度")]
@@ -20,12 +21,17 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float gravity = -20f;
     [SerializeField] private float groundedVelocity = -2f;
 
+    [Header("フック解除後の慣性")]
+    [SerializeField] private float momentumDrag = 5f;
+    [SerializeField] private float minimumMomentumSpeed = 0.1f;
+
     [Header("視点操作")]
     [SerializeField] private Transform cameraHolder;
     [SerializeField] private float mouseSensitivity = 0.15f;
     [SerializeField] private float minLookAngle = -80f;
     [SerializeField] private float maxLookAngle = 80f;
 
+    [Header("フック")]
     [SerializeField] private HookShotController hookShotController;
 
     private CharacterController characterController;
@@ -40,6 +46,9 @@ public class PlayerMovement : MonoBehaviour
     private float cameraPitch;
 
     private bool isGrounded;
+
+    // フック解除後に残る水平方向の速度
+    private Vector3 momentumVelocity;
 
     private void Awake()
     {
@@ -82,17 +91,27 @@ public class PlayerMovement : MonoBehaviour
         if (hookShotController != null &&
             hookShotController.IsPlayerPulling)
         {
+            // フック側がCharacterControllerを動かしている間は
+            // 通常移動と重力を停止する
             verticalVelocity = 0f;
+            momentumVelocity = Vector3.zero;
             return;
         }
 
         Move();
         Jump();
+        ApplyMomentum();
         ApplyGravity();
     }
 
     private void CheckGround()
     {
+        if (groundCheck == null)
+        {
+            isGrounded = false;
+            return;
+        }
+
         isGrounded = Physics.CheckSphere(
             groundCheck.position,
             groundCheckRadius,
@@ -109,7 +128,10 @@ public class PlayerMovement : MonoBehaviour
             transform.right * moveInput.x +
             transform.forward * moveInput.y;
 
-        moveDirection = Vector3.ClampMagnitude(moveDirection, 1f);
+        moveDirection = Vector3.ClampMagnitude(
+            moveDirection,
+            1f
+        );
 
         float currentSpeed = sprintAction.IsPressed()
             ? sprintSpeed
@@ -171,8 +193,52 @@ public class PlayerMovement : MonoBehaviour
         verticalVelocity += gravity * Time.deltaTime;
 
         characterController.Move(
-            Vector3.up * verticalVelocity * Time.deltaTime
+            Vector3.up *
+            verticalVelocity *
+            Time.deltaTime
         );
+    }
+
+    private void ApplyMomentum()
+    {
+        if (momentumVelocity.sqrMagnitude <=
+            minimumMomentumSpeed * minimumMomentumSpeed)
+        {
+            momentumVelocity = Vector3.zero;
+            return;
+        }
+
+        characterController.Move(
+            momentumVelocity * Time.deltaTime
+        );
+
+        momentumVelocity = Vector3.MoveTowards(
+            momentumVelocity,
+            Vector3.zero,
+            momentumDrag * Time.deltaTime
+        );
+
+        // 地面に着いたら慣性を止める
+        if (isGrounded)
+        {
+            momentumVelocity = Vector3.zero;
+        }
+    }
+
+    /// <summary>
+    /// フック解除時の速度を慣性として受け取る
+    /// </summary>
+    public void SetHookMomentum(Vector3 releaseVelocity)
+    {
+        // 水平方向の慣性
+        momentumVelocity = new Vector3(
+            releaseVelocity.x,
+            0f,
+            releaseVelocity.z
+        );
+
+        // 上下方向は既存の重力処理に引き継ぐ
+        verticalVelocity = releaseVelocity.y;
     }
 
     private void OnDrawGizmosSelected()
@@ -181,6 +247,10 @@ public class PlayerMovement : MonoBehaviour
         {
             return;
         }
+
+        Gizmos.color = isGrounded
+            ? Color.green
+            : Color.red;
 
         Gizmos.DrawWireSphere(
             groundCheck.position,

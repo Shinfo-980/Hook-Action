@@ -6,6 +6,7 @@ public class HookShotController : MonoBehaviour
     [Header("参照")]
     [SerializeField] private Camera playerCamera;
     [SerializeField] private CharacterController characterController;
+    [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private Transform hookOrigin;
     [SerializeField] private Transform hookTip;
     [SerializeField] private LineRenderer ropeLine;
@@ -25,6 +26,9 @@ public class HookShotController : MonoBehaviour
     [SerializeField] private float stopDistanceFromWall = 1.2f;
     [SerializeField] private float playerArrivalDistance = 0.1f;
 
+    [Header("フック解除後の慣性")]
+    [SerializeField] private float momentumMultiplier = 1f;
+
     private float currentPullSpeed;
 
     private PlayerInput playerInput;
@@ -32,6 +36,9 @@ public class HookShotController : MonoBehaviour
 
     private Vector3 hookTargetPosition;
     private Vector3 playerTargetPosition;
+
+    // 最後のフレームでPlayerが移動していた速度
+    private Vector3 lastPullVelocity;
 
     private bool isHookFlying;
     private bool isHookAttached;
@@ -43,6 +50,18 @@ public class HookShotController : MonoBehaviour
     {
         playerInput = GetComponent<PlayerInput>();
         hookAction = playerInput.actions["Hook"];
+
+        if (characterController == null)
+        {
+            characterController =
+                GetComponent<CharacterController>();
+        }
+
+        if (playerMovement == null)
+        {
+            playerMovement =
+                GetComponent<PlayerMovement>();
+        }
 
         ropeLine.positionCount = 2;
 
@@ -68,10 +87,6 @@ public class HookShotController : MonoBehaviour
             MoveHookTip();
         }
 
-        /*
-         * フックが壁に刺さっている間、
-         * 左クリックを押している場合だけPlayerを引っ張る
-         */
         if (isHookAttached)
         {
             if (hookAction.IsPressed())
@@ -81,9 +96,9 @@ public class HookShotController : MonoBehaviour
             }
             else
             {
-                // 左クリックを離したら、その場で引き寄せ終了
-                isPlayerPulling = false;
-                ResetHook();
+                // 引っ張っている途中で離した場合だけ
+                // 慣性をPlayerへ渡す
+                ReleaseHook();
             }
         }
 
@@ -100,7 +115,6 @@ public class HookShotController : MonoBehaviour
             return;
         }
 
-        // フックが何もしていないときだけ発射できる
         if (!isHookFlying &&
             !isHookAttached &&
             !isPlayerPulling)
@@ -111,8 +125,11 @@ public class HookShotController : MonoBehaviour
 
     private void FireHook()
     {
-        Vector3 rayOrigin = playerCamera.transform.position;
-        Vector3 rayDirection = playerCamera.transform.forward;
+        Vector3 rayOrigin =
+            playerCamera.transform.position;
+
+        Vector3 rayDirection =
+            playerCamera.transform.forward;
 
         bool hitSomething = Physics.Raycast(
             rayOrigin,
@@ -132,7 +149,8 @@ public class HookShotController : MonoBehaviour
         hookTargetPosition = hit.point;
 
         playerTargetPosition =
-            hit.point + hit.normal * stopDistanceFromWall;
+            hit.point +
+            hit.normal * stopDistanceFromWall;
 
         hookTip.position = hookOrigin.position;
         hookTip.rotation = hookOrigin.rotation;
@@ -143,8 +161,8 @@ public class HookShotController : MonoBehaviour
         isHookAttached = false;
         isPlayerPulling = false;
 
-        // 引き寄せ速度を初期化
         currentPullSpeed = initialPullSpeed;
+        lastPullVelocity = Vector3.zero;
 
         ropeLine.enabled = true;
 
@@ -172,12 +190,6 @@ public class HookShotController : MonoBehaviour
 
             isHookFlying = false;
             isHookAttached = true;
-
-            /*
-             * ここではisPlayerPullingをtrueにしない。
-             * 左クリックが押されているかどうかは
-             * Update内で判定する。
-             */
             isPlayerPulling = false;
 
             Debug.Log("フックが壁に到着");
@@ -186,16 +198,16 @@ public class HookShotController : MonoBehaviour
 
     private void PullPlayer()
     {
-        // 長押ししている間、徐々に加速する
-        currentPullSpeed += pullAcceleration * Time.deltaTime;
+        currentPullSpeed +=
+            pullAcceleration * Time.deltaTime;
 
-        // 最大速度を超えないようにする
         currentPullSpeed = Mathf.Min(
             currentPullSpeed,
             maxPullSpeed
         );
 
-        Vector3 currentPosition = transform.position;
+        Vector3 currentPosition =
+            transform.position;
 
         Vector3 movement = Vector3.MoveTowards(
             currentPosition,
@@ -204,6 +216,13 @@ public class HookShotController : MonoBehaviour
         ) - currentPosition;
 
         characterController.Move(movement);
+
+        // 今回のフレームで実際に移動した速度を記録
+        if (Time.deltaTime > 0f)
+        {
+            lastPullVelocity =
+                movement / Time.deltaTime;
+        }
 
         float distance = Vector3.Distance(
             transform.position,
@@ -214,14 +233,40 @@ public class HookShotController : MonoBehaviour
         {
             Debug.Log("Player引き寄せ完了");
 
+            // 壁まで到着した場合は慣性を付けずに終了
             ResetHook();
         }
     }
 
+    private void ReleaseHook()
+    {
+        bool wasPulling = isPlayerPulling;
+
+        isPlayerPulling = false;
+
+        if (wasPulling &&
+            playerMovement != null)
+        {
+            playerMovement.SetHookMomentum(
+                lastPullVelocity *
+                momentumMultiplier
+            );
+        }
+
+        ResetHook();
+    }
+
     private void UpdateRope()
     {
-        ropeLine.SetPosition(0, hookOrigin.position);
-        ropeLine.SetPosition(1, hookTip.position);
+        ropeLine.SetPosition(
+            0,
+            hookOrigin.position
+        );
+
+        ropeLine.SetPosition(
+            1,
+            hookTip.position
+        );
     }
 
     private void ResetHook()
@@ -230,13 +275,14 @@ public class HookShotController : MonoBehaviour
         isHookAttached = false;
         isPlayerPulling = false;
 
-        // 次のフック用に速度を初期化
         currentPullSpeed = initialPullSpeed;
+        lastPullVelocity = Vector3.zero;
 
         hookTip.SetParent(hookOrigin);
 
         hookTip.localPosition = Vector3.zero;
-        hookTip.localRotation = Quaternion.identity;
+        hookTip.localRotation =
+            Quaternion.identity;
 
         if (ropeLine != null)
         {
