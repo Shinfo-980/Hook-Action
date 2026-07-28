@@ -50,6 +50,9 @@ public class PlayerMovement : MonoBehaviour
     // フック解除後に残る水平方向の速度
     private Vector3 momentumVelocity;
 
+    private float movementBuffMultiplier = 1f;
+    private float jumpBuffMultiplier = 1f;
+
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
@@ -133,9 +136,12 @@ public class PlayerMovement : MonoBehaviour
             1f
         );
 
-        float currentSpeed = sprintAction.IsPressed()
-            ? sprintSpeed
-            : walkSpeed;
+        float baseSpeed = sprintAction.IsPressed()
+    ? sprintSpeed
+    : walkSpeed;
+
+        float currentSpeed =
+            baseSpeed * movementBuffMultiplier;
 
         characterController.Move(
             moveDirection * currentSpeed * Time.deltaTime
@@ -178,8 +184,12 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        float currentJumpHeight =
+    jumpHeight * jumpBuffMultiplier;
+
         verticalVelocity = Mathf.Sqrt(
-            jumpHeight * -2f * gravity
+        currentJumpHeight * -2f * gravity
+        
         );
     }
 
@@ -256,5 +266,23 @@ public class PlayerMovement : MonoBehaviour
             groundCheck.position,
             groundCheckRadius
         );
+    }
+
+    public void SetMovementBuff(
+    float speedMultiplier,
+    float jumpMultiplier
+)
+    {
+        movementBuffMultiplier =
+            Mathf.Max(0f, speedMultiplier);
+
+        jumpBuffMultiplier =
+            Mathf.Max(0f, jumpMultiplier);
+    }
+
+    public void ResetMovementBuff()
+    {
+        movementBuffMultiplier = 1f;
+        jumpBuffMultiplier = 1f;
     }
 }

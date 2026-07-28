@@ -14,6 +14,8 @@ public class ScoreManager : MonoBehaviour
     [Header("Number Sprites（0～9）")]
     [SerializeField] private Sprite[] numberSprites = new Sprite[10];
 
+    private float scoreMultiplier = 1f;
+
     private const int MaxScore = 99999999;
 
     private void Awake()
@@ -36,7 +38,16 @@ public class ScoreManager : MonoBehaviour
 
     public void AddScore(int value)
     {
-        score = Mathf.Clamp(score + value, 0, MaxScore);
+        int addedScore = Mathf.RoundToInt(
+            value * scoreMultiplier
+        );
+
+        score = Mathf.Clamp(
+            score + addedScore,
+            0,
+            MaxScore
+        );
+
         UpdateScoreDisplay();
     }
 
@@ -79,5 +90,21 @@ public class ScoreManager : MonoBehaviour
 
             tempScore /= 10;
         }
+    }
+
+    public void SetScoreMultiplier(float multiplier)
+    {
+        scoreMultiplier = Mathf.Max(0f, multiplier);
+
+        Debug.Log(
+            $"スコア倍率を×{scoreMultiplier}に変更"
+        );
+    }
+
+    public void ResetScoreMultiplier()
+    {
+        scoreMultiplier = 1f;
+
+        Debug.Log("スコア倍率を×1に戻しました");
     }
 }
