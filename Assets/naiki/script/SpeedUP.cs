@@ -1,31 +1,57 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class SpeedUP : MonoBehaviour
 {
-    [SerializeField] private float boostSpeed = 2f;//ブーストする速度
+    [Header("速度上昇量")]
+    [SerializeField] private float boostSpeed = 2f;
+
+    private bool isCollected;
+
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log("移動速度UP");
-        if (other.CompareTag("Player"))
+        if (isCollected)
         {
-            PlayerMovementTest player = other.GetComponent<PlayerMovementTest>();
-            if (player != null)
-            {
-                player.SpeedUp(boostSpeed);
-
-            }
-            Destroy(gameObject);
+            return;
         }
-    }
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
 
-    }
+        if (!other.CompareTag("Player"))
+        {
+            return;
+        }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        PlayerMovement playerMovement =
+            other.GetComponent<PlayerMovement>();
+
+        if (playerMovement == null)
+        {
+            /*
+             * PlayerのColliderが子オブジェクトにある場合にも対応。
+             */
+            playerMovement =
+                other.GetComponentInParent<PlayerMovement>();
+        }
+
+        if (playerMovement == null)
+        {
+            Debug.LogError(
+                "PlayerMovementが見つかりませんでした。"
+            );
+
+            return;
+        }
+
+        isCollected = true;
+
+        playerMovement.SpeedUp(
+            boostSpeed
+        );
+
+        Debug.Log(
+            $"移動速度UPアイテム取得：" +
+            $"+{boostSpeed}"
+        );
+
+        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 }

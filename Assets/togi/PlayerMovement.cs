@@ -11,6 +11,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("ジャンプ")]
     [SerializeField] private float jumpHeight = 1.5f;
+    private float jumpBonus = 0f;
 
     [Header("接地判定")]
     [SerializeField] private Transform groundCheck;
@@ -47,21 +48,41 @@ public class PlayerMovement : MonoBehaviour
 
     private bool isGrounded;
 
-    // フック解除後に残る水平方向の速度
+    // フック解除後に残る慣性速度
     private Vector3 momentumVelocity;
 
+    /*
+     * アイテムによる永続強化。
+     * SpeedUPを取るたびに加算される。
+     */
+    private float speedBonus;
+
+    /*
+     * イベントによる一時的な倍率。
+     * 通常時は1倍。
+     */
     private float movementBuffMultiplier = 1f;
     private float jumpBuffMultiplier = 1f;
 
     private void Awake()
     {
-        characterController = GetComponent<CharacterController>();
-        playerInput = GetComponent<PlayerInput>();
+        characterController =
+            GetComponent<CharacterController>();
 
-        moveAction = playerInput.actions["Move"];
-        sprintAction = playerInput.actions["Sprint"];
-        lookAction = playerInput.actions["Look"];
-        jumpAction = playerInput.actions["Jump"];
+        playerInput =
+            GetComponent<PlayerInput>();
+
+        moveAction =
+            playerInput.actions["Move"];
+
+        sprintAction =
+            playerInput.actions["Sprint"];
+
+        lookAction =
+            playerInput.actions["Look"];
+
+        jumpAction =
+            playerInput.actions["Jump"];
     }
 
     private void OnEnable()
@@ -74,7 +95,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.lockState =
+            CursorLockMode.Locked;
+
         Cursor.visible = false;
     }
 
@@ -94,10 +117,13 @@ public class PlayerMovement : MonoBehaviour
         if (hookShotController != null &&
             hookShotController.IsPlayerPulling)
         {
-            // フック側がCharacterControllerを動かしている間は
-            // 通常移動と重力を停止する
+            /*
+             * フック側がCharacterControllerを動かしている間は
+             * 通常移動、慣性、重力を停止する。
+             */
             verticalVelocity = 0f;
             momentumVelocity = Vector3.zero;
+
             return;
         }
 
@@ -125,7 +151,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void Move()
     {
-        Vector2 moveInput = moveAction.ReadValue<Vector2>();
+        Vector2 moveInput =
+            moveAction.ReadValue<Vector2>();
 
         Vector3 moveDirection =
             transform.right * moveInput.x +
@@ -136,26 +163,45 @@ public class PlayerMovement : MonoBehaviour
             1f
         );
 
-        float baseSpeed = sprintAction.IsPressed()
-    ? sprintSpeed
-    : walkSpeed;
+        /*
+         * 歩きかダッシュかを判定して、
+         * アイテムによる永続強化値を加算する。
+         */
+        float baseSpeed =
+            sprintAction.IsPressed()
+                ? sprintSpeed
+                : walkSpeed;
 
+        float enhancedSpeed =
+            baseSpeed + speedBonus;
+
+        /*
+         * 最後にイベントの一時倍率を適用する。
+         */
         float currentSpeed =
-            baseSpeed * movementBuffMultiplier;
+            enhancedSpeed * movementBuffMultiplier;
 
         characterController.Move(
-            moveDirection * currentSpeed * Time.deltaTime
+            moveDirection *
+            currentSpeed *
+            Time.deltaTime
         );
     }
 
     private void Look()
     {
-        Vector2 lookInput = lookAction.ReadValue<Vector2>();
+        Vector2 lookInput =
+            lookAction.ReadValue<Vector2>();
 
-        float mouseX = lookInput.x * mouseSensitivity;
-        float mouseY = lookInput.y * mouseSensitivity;
+        float mouseX =
+            lookInput.x * mouseSensitivity;
 
-        transform.Rotate(Vector3.up * mouseX);
+        float mouseY =
+            lookInput.y * mouseSensitivity;
+
+        transform.Rotate(
+            Vector3.up * mouseX
+        );
 
         cameraPitch -= mouseY;
 
@@ -165,11 +211,12 @@ public class PlayerMovement : MonoBehaviour
             maxLookAngle
         );
 
-        cameraHolder.localRotation = Quaternion.Euler(
-            cameraPitch,
-            0f,
-            0f
-        );
+        cameraHolder.localRotation =
+            Quaternion.Euler(
+                cameraPitch,
+                0f,
+                0f
+            );
     }
 
     private void Jump()
@@ -184,23 +231,31 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        /*
+         * イベント中のみジャンプ力倍率を適用する。
+         */
         float currentJumpHeight =
-    jumpHeight * jumpBuffMultiplier;
+        (jumpHeight + jumpBonus) *
+         jumpBuffMultiplier;
 
         verticalVelocity = Mathf.Sqrt(
-        currentJumpHeight * -2f * gravity
-        
+            currentJumpHeight *
+            -2f *
+            gravity
         );
     }
 
     private void ApplyGravity()
     {
-        if (isGrounded && verticalVelocity < 0f)
+        if (isGrounded &&
+            verticalVelocity < 0f)
         {
-            verticalVelocity = groundedVelocity;
+            verticalVelocity =
+                groundedVelocity;
         }
 
-        verticalVelocity += gravity * Time.deltaTime;
+        verticalVelocity +=
+            gravity * Time.deltaTime;
 
         characterController.Move(
             Vector3.up *
@@ -212,43 +267,152 @@ public class PlayerMovement : MonoBehaviour
     private void ApplyMomentum()
     {
         if (momentumVelocity.sqrMagnitude <=
-            minimumMomentumSpeed * minimumMomentumSpeed)
+            minimumMomentumSpeed *
+            minimumMomentumSpeed)
         {
-            momentumVelocity = Vector3.zero;
+            momentumVelocity =
+                Vector3.zero;
+
             return;
         }
 
         characterController.Move(
-            momentumVelocity * Time.deltaTime
+            momentumVelocity *
+            Time.deltaTime
         );
 
-        momentumVelocity = Vector3.MoveTowards(
-            momentumVelocity,
-            Vector3.zero,
-            momentumDrag * Time.deltaTime
-        );
+        momentumVelocity =
+            Vector3.MoveTowards(
+                momentumVelocity,
+                Vector3.zero,
+                momentumDrag *
+                Time.deltaTime
+            );
 
-        // 地面に着いたら慣性を止める
         if (isGrounded)
         {
-            momentumVelocity = Vector3.zero;
+            momentumVelocity =
+                Vector3.zero;
         }
     }
 
     /// <summary>
-    /// フック解除時の速度を慣性として受け取る
+    /// フック解除時の速度を慣性として受け取る。
     /// </summary>
-    public void SetHookMomentum(Vector3 releaseVelocity)
+    public void SetHookMomentum(
+        Vector3 releaseVelocity
+    )
     {
-        // 水平方向の慣性
-        momentumVelocity = new Vector3(
-            releaseVelocity.x,
-            0f,
-            releaseVelocity.z
-        );
+        momentumVelocity =
+            new Vector3(
+                releaseVelocity.x,
+                0f,
+                releaseVelocity.z
+            );
 
-        // 上下方向は既存の重力処理に引き継ぐ
-        verticalVelocity = releaseVelocity.y;
+        verticalVelocity =
+            releaseVelocity.y;
+    }
+
+    /// <summary>
+    /// アイテムによる永続的な速度強化。
+    /// </summary>
+    public void SpeedUp(float amount)
+    {
+        if (amount <= 0f)
+        {
+            Debug.LogWarning(
+                "速度上昇値は0より大きい値にしてください。"
+            );
+
+            return;
+        }
+
+        speedBonus += amount;
+
+        Debug.Log(
+            $"移動速度が{amount}上昇しました。" +
+            $"現在の永続速度ボーナス：{speedBonus}"
+        );
+    }
+
+    /// <summary>
+    /// アイテムによる永続ジャンプ強化
+    /// </summary>
+    public void JumpUp(float amount)
+    {
+        if (amount <= 0f)
+        {
+            Debug.LogWarning("ジャンプ上昇値は0より大きい値にしてください。");
+            return;
+        }
+
+        jumpBonus += amount;
+
+        Debug.Log(
+            $"ジャンプ力が{amount}上昇しました。" +
+            $"現在の永続ジャンプボーナス：{jumpBonus}"
+        );
+    }
+
+    /// <summary>
+    /// イベントによる一時的な移動速度・ジャンプ力強化。
+    /// </summary>
+    public void SetMovementBuff(
+        float speedMultiplier,
+        float jumpMultiplier
+    )
+    {
+        movementBuffMultiplier =
+            Mathf.Max(
+                0f,
+                speedMultiplier
+            );
+
+        jumpBuffMultiplier =
+            Mathf.Max(
+                0f,
+                jumpMultiplier
+            );
+
+        Debug.Log(
+            $"一時バフ開始：" +
+            $"移動速度×{movementBuffMultiplier}、" +
+            $"ジャンプ力×{jumpBuffMultiplier}"
+        );
+    }
+
+    /// <summary>
+    /// イベントによる一時バフを解除する。
+    /// 永続強化値は残る。
+    /// </summary>
+    public void ResetMovementBuff()
+    {
+        movementBuffMultiplier = 1f;
+        jumpBuffMultiplier = 1f;
+
+        Debug.Log(
+            "移動速度とジャンプ力の一時バフを解除しました。"
+        );
+    }
+
+    public float GetSpeedBonus()
+    {
+        return speedBonus;
+    }
+
+    public float GetCurrentWalkSpeed()
+    {
+        return
+            (walkSpeed + speedBonus) *
+            movementBuffMultiplier;
+    }
+
+    public float GetCurrentSprintSpeed()
+    {
+        return
+            (sprintSpeed + speedBonus) *
+            movementBuffMultiplier;
     }
 
     private void OnDrawGizmosSelected()
@@ -258,31 +422,14 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        Gizmos.color = isGrounded
-            ? Color.green
-            : Color.red;
+        Gizmos.color =
+            isGrounded
+                ? Color.green
+                : Color.red;
 
         Gizmos.DrawWireSphere(
             groundCheck.position,
             groundCheckRadius
         );
-    }
-
-    public void SetMovementBuff(
-    float speedMultiplier,
-    float jumpMultiplier
-)
-    {
-        movementBuffMultiplier =
-            Mathf.Max(0f, speedMultiplier);
-
-        jumpBuffMultiplier =
-            Mathf.Max(0f, jumpMultiplier);
-    }
-
-    public void ResetMovementBuff()
-    {
-        movementBuffMultiplier = 1f;
-        jumpBuffMultiplier = 1f;
     }
 }

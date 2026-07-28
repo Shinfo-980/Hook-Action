@@ -27,7 +27,7 @@ public class ScoreItem : MonoBehaviour
 
         isCollected = true;
 
-        ScoreManagerTest.instance.AddScore(point);
+        ScoreManager.instance.AddScore(point);
 
         Destroy(gameObject);
     }
