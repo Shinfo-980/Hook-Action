@@ -8,6 +8,7 @@ public class ToGameScene : MonoBehaviour
 
     private void Update()
     {
+        //いずれかのキーが押されたときにゲームシーンへ移動する
         if (Keyboard.current != null &&
             Keyboard.current.anyKey.wasPressedThisFrame)
         {

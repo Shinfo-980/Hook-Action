@@ -8,6 +8,7 @@ public class BlinkText : MonoBehaviour
 
     private void Start()
     {
+        //テキストコンポーネントがなければ取得する
         if (text == null)
         {
             text = GetComponent<TextMeshProUGUI>();
@@ -16,6 +17,7 @@ public class BlinkText : MonoBehaviour
 
     private void Update()
     {
+        //テキストの文字を点滅させる
         Color color = text.color;
         color.a = (Mathf.Sin(Time.time * speed) + 1f) / 2f;
         text.color = color;
