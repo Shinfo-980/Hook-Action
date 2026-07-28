@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 public class TimerManager : MonoBehaviour
 {
     [Header("Time")]
-    [SerializeField] private float time = 120f;
+    [SerializeField] private float time = 240f;
 
     [Header("Digit Images")]
     [SerializeField] private Image hundredsImage;
@@ -18,9 +19,14 @@ public class TimerManager : MonoBehaviour
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color warningColor = Color.red;
 
+    [Header("Scripts")]
+    [SerializeField] private EventManager EventManager;
+
     private void Start()
     {
         UpdateTimerDisplay();
+        StartCoroutine(EventWait(90,"mission"));
+        StartCoroutine(EventWait(210,"scoreUp"));
     }
 
     private void Update()
@@ -34,6 +40,8 @@ public class TimerManager : MonoBehaviour
         }
 
         UpdateTimerDisplay();
+
+        
     }
 
     private void UpdateTimerDisplay()
@@ -72,5 +80,23 @@ public class TimerManager : MonoBehaviour
     {
         time = Mathf.Clamp(time + value, 0, 999);
         UpdateTimerDisplay();
+    }
+
+    public void Event(string Event)
+    {
+        if(Event == "mission")
+        {
+            EventManager.missionEvent();
+        }
+        if(Event == "scoreUp")
+        {
+            EventManager.scoreUp();
+        }
+    }
+
+    public IEnumerator EventWait(int waitTime,string Event)
+    {     
+        yield return new WaitForSeconds(waitTime);
+        this.Event(Event);
     }
 }
