@@ -1,18 +1,17 @@
 using UnityEngine;
 
-public class idouUP : MonoBehaviour
+public class SpeedUP : MonoBehaviour
 {
-    [SerializeField] private float boostSpeed = 20f;//ブーストする速度
-    [SerializeField] private float boostTime = 5f;//ブーストする時間
+    [SerializeField] private float boostSpeed = 2f;//ブーストする速度
     private void OnTriggerEnter(Collider other)
     {
         Debug.Log("移動速度UP");
         if (other.CompareTag("Player"))
-        { 
-            PlayerTest player = other.GetComponent<PlayerTest>();
+        {
+            PlayerMovementTest player = other.GetComponent<PlayerMovementTest>();
             if (player != null)
             {
-                player.SpeedUp(boostSpeed, boostTime);
+                player.SpeedUp(boostSpeed);
 
             }
             Destroy(gameObject);
