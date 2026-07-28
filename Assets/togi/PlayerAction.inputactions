@@ -43,7 +43,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Hook",
+                    "name": "HookFire",
                     "type": "Button",
                     "id": "fd377a57-7494-4957-a294-daee0c74d11a",
                     "expectedControlType": "",
@@ -59,6 +59,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "HookPull",
+                    "type": "Button",
+                    "id": "525b01d0-9346-47ed-982c-6ee7e28d12b2",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -190,7 +199,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Hook",
+                    "action": "HookFire",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -201,7 +210,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Hook",
+                    "action": "HookFire",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -213,6 +222,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "ControllerLook",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "160d8948-70e2-42fe-8fa4-c22192868ede",
+                    "path": "<Gamepad>/rightShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "HookPull",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5c332464-3dc5-4f7b-81f2-f1ff049cf08a",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "HookPull",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

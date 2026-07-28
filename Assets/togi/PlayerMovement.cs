@@ -25,6 +25,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float momentumDrag = 5f;
     [SerializeField] private float minimumMomentumSpeed = 0.1f;
 
+    [Header("フック中の移動操作")]
+    [SerializeField] private float hookMoveControl = 0.35f;
+
     [Header("視点操作")]
     [SerializeField] private Transform cameraHolder;
 
@@ -71,6 +74,8 @@ public class PlayerMovement : MonoBehaviour
     // イベントによる一時的な倍率
     private float movementBuffMultiplier = 1f;
     private float jumpBuffMultiplier = 1f;
+
+    private bool isSprintActive;
 
     private void Awake()
     {
@@ -161,25 +166,34 @@ public class PlayerMovement : MonoBehaviour
         Vector2 moveInput =
             moveAction.ReadValue<Vector2>();
 
+        // Sprintボタンを押した瞬間にSprint状態へ
+        if (sprintAction.WasPressedThisFrame())
+        {
+            isSprintActive = true;
+        }
+
+        // 移動入力が完全になくなったらSprint解除
+        if (moveInput.sqrMagnitude <= 0.001f)
+        {
+            isSprintActive = false;
+        }
+
         Vector3 moveDirection =
             transform.right * moveInput.x +
             transform.forward * moveInput.y;
 
-        moveDirection = Vector3.ClampMagnitude(
-            moveDirection,
-            1f
-        );
+        if (moveDirection.sqrMagnitude > 1f)
+        {
+            moveDirection.Normalize();
+        }
 
-        float baseSpeed =
-            sprintAction.IsPressed()
+        float baseMoveSpeed =
+            isSprintActive
                 ? sprintSpeed
                 : walkSpeed;
 
-        float enhancedSpeed =
-            baseSpeed + speedBonus;
-
         float currentSpeed =
-            enhancedSpeed *
+            (baseMoveSpeed + speedBonus) *
             movementBuffMultiplier;
 
         characterController.Move(
