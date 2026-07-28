@@ -11,7 +11,6 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("ジャンプ")]
     [SerializeField] private float jumpHeight = 1.5f;
-    private float jumpBonus = 0f;
 
     [Header("接地判定")]
     [SerializeField] private Transform groundCheck;
@@ -28,9 +27,20 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("視点操作")]
     [SerializeField] private Transform cameraHolder;
+
+    [Header("マウス感度")]
     [SerializeField] private float mouseSensitivity = 0.15f;
+
+    [Header("コントローラー感度")]
+    [SerializeField] private float controllerSensitivity = 180f;
+
+    [Header("上下の視点制限")]
     [SerializeField] private float minLookAngle = -80f;
     [SerializeField] private float maxLookAngle = 80f;
+
+    [Header("コントローラー設定")]
+    [SerializeField] private float controllerDeadZone = 0.1f;
+    [SerializeField] private bool invertControllerY = false;
 
     [Header("フック")]
     [SerializeField] private HookShotController hookShotController;
@@ -41,6 +51,7 @@ public class PlayerMovement : MonoBehaviour
     private InputAction moveAction;
     private InputAction sprintAction;
     private InputAction lookAction;
+    private InputAction controllerLookAction;
     private InputAction jumpAction;
 
     private float verticalVelocity;
@@ -51,16 +62,13 @@ public class PlayerMovement : MonoBehaviour
     // フック解除後に残る慣性速度
     private Vector3 momentumVelocity;
 
-    /*
-     * アイテムによる永続強化。
-     * SpeedUPを取るたびに加算される。
-     */
-    private float speedBonus;
+    // アイテムによる永続速度強化
+    private float speedBonus = 0f;
 
-    /*
-     * イベントによる一時的な倍率。
-     * 通常時は1倍。
-     */
+    // アイテムによる永続ジャンプ強化
+    private float jumpBonus = 0f;
+
+    // イベントによる一時的な倍率
     private float movementBuffMultiplier = 1f;
     private float jumpBuffMultiplier = 1f;
 
@@ -81,6 +89,9 @@ public class PlayerMovement : MonoBehaviour
         lookAction =
             playerInput.actions["Look"];
 
+        controllerLookAction =
+            playerInput.actions["ControllerLook"];
+
         jumpAction =
             playerInput.actions["Jump"];
     }
@@ -90,14 +101,13 @@ public class PlayerMovement : MonoBehaviour
         moveAction.Enable();
         sprintAction.Enable();
         lookAction.Enable();
+        controllerLookAction.Enable();
         jumpAction.Enable();
     }
 
     private void Start()
     {
-        Cursor.lockState =
-            CursorLockMode.Locked;
-
+        Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
@@ -106,6 +116,7 @@ public class PlayerMovement : MonoBehaviour
         moveAction.Disable();
         sprintAction.Disable();
         lookAction.Disable();
+        controllerLookAction.Disable();
         jumpAction.Disable();
     }
 
@@ -117,10 +128,6 @@ public class PlayerMovement : MonoBehaviour
         if (hookShotController != null &&
             hookShotController.IsPlayerPulling)
         {
-            /*
-             * フック側がCharacterControllerを動かしている間は
-             * 通常移動、慣性、重力を停止する。
-             */
             verticalVelocity = 0f;
             momentumVelocity = Vector3.zero;
 
@@ -163,10 +170,6 @@ public class PlayerMovement : MonoBehaviour
             1f
         );
 
-        /*
-         * 歩きかダッシュかを判定して、
-         * アイテムによる永続強化値を加算する。
-         */
         float baseSpeed =
             sprintAction.IsPressed()
                 ? sprintSpeed
@@ -175,11 +178,9 @@ public class PlayerMovement : MonoBehaviour
         float enhancedSpeed =
             baseSpeed + speedBonus;
 
-        /*
-         * 最後にイベントの一時倍率を適用する。
-         */
         float currentSpeed =
-            enhancedSpeed * movementBuffMultiplier;
+            enhancedSpeed *
+            movementBuffMultiplier;
 
         characterController.Move(
             moveDirection *
@@ -190,20 +191,63 @@ public class PlayerMovement : MonoBehaviour
 
     private void Look()
     {
-        Vector2 lookInput =
+        Vector2 mouseInput =
             lookAction.ReadValue<Vector2>();
 
-        float mouseX =
-            lookInput.x * mouseSensitivity;
+        Vector2 controllerInput =
+            controllerLookAction.ReadValue<Vector2>();
 
-        float mouseY =
-            lookInput.y * mouseSensitivity;
+        float horizontalLook = 0f;
+        float verticalLook = 0f;
+
+        /*
+         * マウスは1フレーム内で動いた量が入力されるため、
+         * Time.deltaTimeを掛けない。
+         */
+        if (mouseInput.sqrMagnitude > 0.0001f)
+        {
+            horizontalLook =
+                mouseInput.x *
+                mouseSensitivity;
+
+            verticalLook =
+                mouseInput.y *
+                mouseSensitivity;
+        }
+
+        /*
+         * スティックは倒している量が-1～1で入力され続けるため、
+         * Time.deltaTimeを掛ける。
+         */
+        if (controllerInput.sqrMagnitude >
+            controllerDeadZone *
+            controllerDeadZone)
+        {
+            horizontalLook +=
+                controllerInput.x *
+                controllerSensitivity *
+                Time.deltaTime;
+
+            float controllerY =
+                controllerInput.y;
+
+            if (invertControllerY)
+            {
+                controllerY *= -1f;
+            }
+
+            verticalLook +=
+                controllerY *
+                controllerSensitivity *
+                Time.deltaTime;
+        }
 
         transform.Rotate(
-            Vector3.up * mouseX
+            Vector3.up *
+            horizontalLook
         );
 
-        cameraPitch -= mouseY;
+        cameraPitch -= verticalLook;
 
         cameraPitch = Mathf.Clamp(
             cameraPitch,
@@ -211,12 +255,15 @@ public class PlayerMovement : MonoBehaviour
             maxLookAngle
         );
 
-        cameraHolder.localRotation =
-            Quaternion.Euler(
-                cameraPitch,
-                0f,
-                0f
-            );
+        if (cameraHolder != null)
+        {
+            cameraHolder.localRotation =
+                Quaternion.Euler(
+                    cameraPitch,
+                    0f,
+                    0f
+                );
+        }
     }
 
     private void Jump()
@@ -231,12 +278,9 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        /*
-         * イベント中のみジャンプ力倍率を適用する。
-         */
         float currentJumpHeight =
-        (jumpHeight + jumpBonus) *
-         jumpBuffMultiplier;
+            (jumpHeight + jumpBonus) *
+            jumpBuffMultiplier;
 
         verticalVelocity = Mathf.Sqrt(
             currentJumpHeight *
@@ -255,7 +299,8 @@ public class PlayerMovement : MonoBehaviour
         }
 
         verticalVelocity +=
-            gravity * Time.deltaTime;
+            gravity *
+            Time.deltaTime;
 
         characterController.Move(
             Vector3.up *
@@ -299,9 +344,7 @@ public class PlayerMovement : MonoBehaviour
     /// <summary>
     /// フック解除時の速度を慣性として受け取る。
     /// </summary>
-    public void SetHookMomentum(
-        Vector3 releaseVelocity
-    )
+    public void SetHookMomentum(Vector3 releaseVelocity)
     {
         momentumVelocity =
             new Vector3(
@@ -337,13 +380,16 @@ public class PlayerMovement : MonoBehaviour
     }
 
     /// <summary>
-    /// アイテムによる永続ジャンプ強化
+    /// アイテムによる永続的なジャンプ強化。
     /// </summary>
     public void JumpUp(float amount)
     {
         if (amount <= 0f)
         {
-            Debug.LogWarning("ジャンプ上昇値は0より大きい値にしてください。");
+            Debug.LogWarning(
+                "ジャンプ上昇値は0より大きい値にしてください。"
+            );
+
             return;
         }
 
@@ -384,7 +430,6 @@ public class PlayerMovement : MonoBehaviour
 
     /// <summary>
     /// イベントによる一時バフを解除する。
-    /// 永続強化値は残る。
     /// </summary>
     public void ResetMovementBuff()
     {
@@ -399,6 +444,11 @@ public class PlayerMovement : MonoBehaviour
     public float GetSpeedBonus()
     {
         return speedBonus;
+    }
+
+    public float GetJumpBonus()
+    {
+        return jumpBonus;
     }
 
     public float GetCurrentWalkSpeed()

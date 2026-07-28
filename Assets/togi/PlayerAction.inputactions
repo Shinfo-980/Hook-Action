@@ -50,6 +50,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "ControllerLook",
+                    "type": "Value",
+                    "id": "936c86f1-22a5-4085-8989-9ce3b3b3e985",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
@@ -154,17 +163,6 @@
                 },
                 {
                     "name": "",
-                    "id": "cc9a150d-4762-4e81-aec6-0c9998b79e16",
-                    "path": "<Gamepad>/rightStick",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Look",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "0b6b4663-4898-4992-8736-93d93e197e7b",
                     "path": "<Keyboard>/space",
                     "interactions": "",
@@ -204,6 +202,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Hook",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f46ff052-4502-4982-b755-7c96820676d7",
+                    "path": "<Gamepad>/rightStick",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ControllerLook",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

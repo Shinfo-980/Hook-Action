@@ -1421,8 +1421,11 @@ MonoBehaviour:
   minimumMomentumSpeed: 0.1
   cameraHolder: {fileID: 1547942549}
   mouseSensitivity: 0.15
+  controllerSensitivity: 180
   minLookAngle: -80
   maxLookAngle: 80
+  controllerDeadZone: 0.1
+  invertControllerY: 0
   hookShotController: {fileID: 227612462}
 --- !u!114 &227612462
 MonoBehaviour:
