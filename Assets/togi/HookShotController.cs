@@ -37,26 +37,50 @@ public class HookShotController : MonoBehaviour
     [Header("フック解除後の慣性")]
     [SerializeField] private float momentumMultiplier = 1f;
 
+    [Header("SE用AudioSource")]
+    [Tooltip("発射音と命中音を再生するAudioSource")]
+    [SerializeField] private AudioSource oneShotAudioSource;
+
+    [Tooltip("飛行音と引き寄せ音を再生するAudioSource")]
+    [SerializeField] private AudioSource loopAudioSource;
+
+    [Header("フック発射SE")]
+    [SerializeField] private AudioClip hookShotSE;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float hookShotSEVolume = 1f;
+
+    [Header("フック飛行中SE")]
+    [Tooltip("フックが飛んでいる間にループ再生するSE")]
+    [SerializeField] private AudioClip hookFlyingLoopSE;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float hookFlyingLoopSEVolume = 1f;
+
+    [Header("フック命中SE")]
+    [Tooltip("フックが壁に引っかかった瞬間のSE")]
+    [SerializeField] private AudioClip hookAttachSE;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float hookAttachSEVolume = 1f;
+
+    [Header("Player引き寄せ中SE")]
+    [Tooltip("フックでPlayerを引き寄せている間にループ再生するSE")]
+    [SerializeField] private AudioClip hookPullLoopSE;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float hookPullLoopSEVolume = 1f;
+
     private PlayerInput playerInput;
-
-    // ZR：フック発射・接続維持
     private InputAction hookFireAction;
-
-    // R：Player引き寄せ
-    //private InputAction hookPullAction;
-
-    // WASD・左スティック
     private InputAction moveAction;
 
     private Vector3 hookTargetPosition;
     private Vector3 playerTargetPosition;
 
-    // フック解除時にPlayerMovementへ渡す速度
     private Vector3 lastPullVelocity;
 
-    // フックが刺さった瞬間のロープの長さ
     private float attachedRopeLength;
-
     private float currentPullSpeed;
 
     private bool isHookFlying;
@@ -74,8 +98,7 @@ public class HookShotController : MonoBehaviour
         if (playerInput == null)
         {
             Debug.LogError(
-                "HookShotControllerと同じGameObjectに" +
-                "PlayerInputがありません。"
+                "HookShotControllerと同じGameObjectにPlayerInputがありません。"
             );
 
             enabled = false;
@@ -87,12 +110,6 @@ public class HookShotController : MonoBehaviour
                 "HookFire",
                 true
             );
-
-        /*hookPullAction =
-            playerInput.actions.FindAction(
-                "HookPull",
-                true
-            );*/
 
         moveAction =
             playerInput.actions.FindAction(
@@ -117,21 +134,22 @@ public class HookShotController : MonoBehaviour
             ropeLine.positionCount = 2;
         }
 
+        SetupAudioSources();
         ResetHook();
     }
 
     private void OnEnable()
     {
         hookFireAction?.Enable();
-        //hookPullAction?.Enable();
         moveAction?.Enable();
     }
 
     private void OnDisable()
     {
         hookFireAction?.Disable();
-        //hookPullAction?.Disable();
         moveAction?.Disable();
+
+        ResetHook();
     }
 
     private void Update()
@@ -144,23 +162,21 @@ public class HookShotController : MonoBehaviour
             MoveHookTip();
         }
 
-        /*if (isHookAttached)
-        {
-            HandleHookPullInput();
-        }*/
-
         if (isHookAttached)
         {
-            // 左クリックを押している間は
-            // 自動で引き寄せる
-            if (hookFireAction.IsPressed())
+            if (hookFireAction != null &&
+                hookFireAction.IsPressed())
             {
-                isPlayerPulling = true;
+                if (!isPlayerPulling)
+                {
+                    isPlayerPulling = true;
+                    PlayHookPullLoopSE();
+                }
+
                 PullPlayer();
             }
             else
             {
-                // 離したら慣性を付けて解除
                 if (isPlayerPulling &&
                     playerMovement != null)
                 {
@@ -188,50 +204,58 @@ public class HookShotController : MonoBehaviour
             return;
         }
 
-        // Rで巻き取っている間は、
-        // 現在の長さを新しい最大ロープ長として保存する
         if (isPlayerPulling)
         {
             UpdateRopeLengthWhilePulling();
         }
 
-        // 保存された最大長を超えないように補正
         LimitRopeLength();
-
         UpdateRope();
     }
 
-    /// <summary>
-    /// 巻き取った分だけロープの最大長を短くする
-    /// </summary>
-    private void UpdateRopeLengthWhilePulling()
+    private void SetupAudioSources()
     {
-        if (hookOrigin == null)
+        AudioSource[] audioSources =
+            GetComponents<AudioSource>();
+
+        if (oneShotAudioSource == null &&
+            audioSources.Length > 0)
         {
-            return;
+            oneShotAudioSource =
+                audioSources[0];
         }
 
-        float currentRopeLength =
-            Vector3.Distance(
-                hookOrigin.position,
-                hookTargetPosition
-            );
+        if (loopAudioSource == null)
+        {
+            if (audioSources.Length > 1)
+            {
+                loopAudioSource =
+                    audioSources[1];
+            }
+            else
+            {
+                loopAudioSource =
+                    gameObject.AddComponent<AudioSource>();
+            }
+        }
 
-        // ロープは短くなる方向にだけ更新する
-        // 一度巻き取った分が再び伸びることを防ぐ
-        attachedRopeLength =
-            Mathf.Min(
-                attachedRopeLength,
-                currentRopeLength
-            );
+        if (oneShotAudioSource == null)
+        {
+            oneShotAudioSource =
+                gameObject.AddComponent<AudioSource>();
+        }
+
+        oneShotAudioSource.playOnAwake = false;
+        oneShotAudioSource.loop = false;
+
+        loopAudioSource.playOnAwake = false;
+        loopAudioSource.loop = true;
     }
 
-    /// <summary>
-    /// ZRを押した瞬間にフックを発射する
-    /// </summary>
     private void HandleHookFireInput()
     {
-        if (!hookFireAction.WasPressedThisFrame())
+        if (hookFireAction == null ||
+            !hookFireAction.WasPressedThisFrame())
         {
             return;
         }
@@ -246,12 +270,10 @@ public class HookShotController : MonoBehaviour
         FireHook();
     }
 
-    /// <summary>
-    /// ZRを離したときだけフックを解除する
-    /// </summary>
     private void HandleHookFireRelease()
     {
-        if (!hookFireAction.WasReleasedThisFrame())
+        if (hookFireAction == null ||
+            !hookFireAction.WasReleasedThisFrame())
         {
             return;
         }
@@ -263,8 +285,6 @@ public class HookShotController : MonoBehaviour
             return;
         }
 
-        // 巻き取り中にZRを離した場合は
-        // 最後の速度を慣性として渡す
         if (isPlayerPulling &&
             playerMovement != null)
         {
@@ -277,45 +297,10 @@ public class HookShotController : MonoBehaviour
         ResetHook();
 
         Debug.Log(
-            "ZRを離したためフック解除"
+            "フックボタンを離したためフック解除"
         );
     }
 
-    /// <summary>
-    /// Rを押している間だけPlayerを引き寄せる
-    /// Rを離してもフックは解除しない
-    /// </summary>
-    /*private void HandleHookPullInput()
-    {
-        if (hookPullAction.IsPressed())
-        {
-            isPlayerPulling = true;
-
-            PullPlayer();
-
-            return;
-        }
-
-        // Rを離したら巻き取りだけ停止する
-        if (isPlayerPulling)
-        {
-            isPlayerPulling = false;
-
-            currentPullSpeed =
-                initialPullSpeed;
-
-            lastPullVelocity =
-                Vector3.zero;
-
-            Debug.Log(
-                "巻き取り停止"
-            );
-        }
-    }*/
-
-    /// <summary>
-    /// フックを発射する
-    /// </summary>
     private void FireHook()
     {
         if (playerCamera == null)
@@ -331,8 +316,7 @@ public class HookShotController : MonoBehaviour
             hookTip == null)
         {
             Debug.LogError(
-                "Hook OriginまたはHook Tipが" +
-                "設定されていません。"
+                "Hook OriginまたはHook Tipが設定されていません。"
             );
 
             return;
@@ -344,14 +328,15 @@ public class HookShotController : MonoBehaviour
         Vector3 rayDirection =
             playerCamera.transform.forward;
 
-        bool hitSomething = Physics.Raycast(
-            rayOrigin,
-            rayDirection,
-            out RaycastHit hit,
-            maxHookDistance,
-            hookableLayer,
-            QueryTriggerInteraction.Ignore
-        );
+        bool hitSomething =
+            Physics.Raycast(
+                rayOrigin,
+                rayDirection,
+                out RaycastHit hit,
+                maxHookDistance,
+                hookableLayer,
+                QueryTriggerInteraction.Ignore
+            );
 
         if (!hitSomething)
         {
@@ -365,7 +350,6 @@ public class HookShotController : MonoBehaviour
         hookTargetPosition =
             hit.point;
 
-        // Playerが壁にめり込まない位置
         playerTargetPosition =
             hit.point +
             hit.normal *
@@ -377,7 +361,6 @@ public class HookShotController : MonoBehaviour
         hookTip.rotation =
             hookOrigin.rotation;
 
-        // Playerの子のままだと一緒に動いてしまうため外す
         hookTip.SetParent(
             null,
             true
@@ -403,16 +386,22 @@ public class HookShotController : MonoBehaviour
 
         UpdateRope();
 
+        PlayHookShotSE();
+        PlayHookFlyingLoopSE();
+
         Debug.Log(
             "フック発射"
         );
     }
 
-    /// <summary>
-    /// フック先端を命中地点まで移動させる
-    /// </summary>
     private void MoveHookTip()
     {
+        if (hookTip == null)
+        {
+            ResetHook();
+            return;
+        }
+
         hookTip.position =
             Vector3.MoveTowards(
                 hookTip.position,
@@ -446,22 +435,20 @@ public class HookShotController : MonoBehaviour
         lastPullVelocity =
             Vector3.zero;
 
-        // 刺さった瞬間のロープ長を保存
         attachedRopeLength =
             Vector3.Distance(
                 hookOrigin.position,
                 hookTargetPosition
             );
 
+        StopLoopSE();
+        PlayHookAttachSE();
+
         Debug.Log(
-            "フックが壁に到着しました。" +
-            "Rを押すと巻き取ります。"
+            "フックが壁に引っかかりました。"
         );
     }
 
-    /// <summary>
-    /// Playerをフック地点へ引き寄せる
-    /// </summary>
     private void PullPlayer()
     {
         if (characterController == null)
@@ -475,13 +462,13 @@ public class HookShotController : MonoBehaviour
                 playerTargetPosition
             );
 
-        // 到着してもフックは解除しない
-        // ZRを離すまで接続状態を維持する
         if (distance <=
             playerArrivalDistance)
         {
             lastPullVelocity =
                 Vector3.zero;
+
+            StopLoopSE();
 
             return;
         }
@@ -499,7 +486,6 @@ public class HookShotController : MonoBehaviour
         Vector3 currentPosition =
             transform.position;
 
-        // フックによる引き寄せ
         Vector3 pullMovement =
             Vector3.MoveTowards(
                 currentPosition,
@@ -508,7 +494,6 @@ public class HookShotController : MonoBehaviour
                 Time.deltaTime
             ) - currentPosition;
 
-        // Move入力による軌道修正
         Vector3 moveControl =
             CalculateMoveControl();
 
@@ -532,10 +517,26 @@ public class HookShotController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// フックが刺さった瞬間より
-    /// ロープが長くならないようPlayerを補正する
-    /// </summary>
+    private void UpdateRopeLengthWhilePulling()
+    {
+        if (hookOrigin == null)
+        {
+            return;
+        }
+
+        float currentRopeLength =
+            Vector3.Distance(
+                hookOrigin.position,
+                hookTargetPosition
+            );
+
+        attachedRopeLength =
+            Mathf.Min(
+                attachedRopeLength,
+                currentRopeLength
+            );
+    }
+
     private void LimitRopeLength()
     {
         if (!isHookAttached ||
@@ -576,9 +577,6 @@ public class HookShotController : MonoBehaviour
         );
     }
 
-    /// <summary>
-    /// フック移動中のMove入力を計算する
-    /// </summary>
     private Vector3 CalculateMoveControl()
     {
         if (moveAction == null)
@@ -608,7 +606,6 @@ public class HookShotController : MonoBehaviour
             transform.forward *
             moveInput.y;
 
-        // フック中の操作では上下移動を加えない
         moveDirection.y = 0f;
 
         if (moveDirection.sqrMagnitude > 1f)
@@ -620,9 +617,6 @@ public class HookShotController : MonoBehaviour
                hookMoveSpeed;
     }
 
-    /// <summary>
-    /// ロープ描画を更新する
-    /// </summary>
     private void UpdateRope()
     {
         if (ropeLine == null ||
@@ -643,11 +637,10 @@ public class HookShotController : MonoBehaviour
         );
     }
 
-    /// <summary>
-    /// フックを初期状態へ戻す
-    /// </summary>
     private void ResetHook()
     {
+        StopLoopSE();
+
         isHookFlying = false;
         isHookAttached = false;
         isPlayerPulling = false;
@@ -677,8 +670,128 @@ public class HookShotController : MonoBehaviour
 
         if (ropeLine != null)
         {
-            ropeLine.enabled =
-                false;
+            ropeLine.enabled = false;
         }
+    }
+
+    private void PlayHookShotSE()
+    {
+        PlayOneShotSE(
+            hookShotSE,
+            hookShotSEVolume,
+            "Hook Shot SE"
+        );
+    }
+
+    private void PlayHookAttachSE()
+    {
+        PlayOneShotSE(
+            hookAttachSE,
+            hookAttachSEVolume,
+            "Hook Attach SE"
+        );
+    }
+
+    private void PlayHookFlyingLoopSE()
+    {
+        PlayLoopSE(
+            hookFlyingLoopSE,
+            hookFlyingLoopSEVolume,
+            "Hook Flying Loop SE"
+        );
+    }
+
+    private void PlayHookPullLoopSE()
+    {
+        PlayLoopSE(
+            hookPullLoopSE,
+            hookPullLoopSEVolume,
+            "Hook Pull Loop SE"
+        );
+    }
+
+    private void PlayOneShotSE(
+        AudioClip audioClip,
+        float volume,
+        string seName
+    )
+    {
+        if (oneShotAudioSource == null)
+        {
+            Debug.LogWarning(
+                "One Shot Audio Sourceが設定されていません。"
+            );
+
+            return;
+        }
+
+        if (audioClip == null)
+        {
+            Debug.LogWarning(
+                $"{seName}が設定されていません。"
+            );
+
+            return;
+        }
+
+        oneShotAudioSource.PlayOneShot(
+            audioClip,
+            volume
+        );
+    }
+
+    private void PlayLoopSE(
+        AudioClip audioClip,
+        float volume,
+        string seName
+    )
+    {
+        if (loopAudioSource == null)
+        {
+            Debug.LogWarning(
+                "Loop Audio Sourceが設定されていません。"
+            );
+
+            return;
+        }
+
+        if (audioClip == null)
+        {
+            Debug.LogWarning(
+                $"{seName}が設定されていません。"
+            );
+
+            return;
+        }
+
+        if (loopAudioSource.isPlaying &&
+            loopAudioSource.clip == audioClip)
+        {
+            return;
+        }
+
+        loopAudioSource.Stop();
+
+        loopAudioSource.clip =
+            audioClip;
+
+        loopAudioSource.volume =
+            volume;
+
+        loopAudioSource.loop =
+            true;
+
+        loopAudioSource.Play();
+    }
+
+    private void StopLoopSE()
+    {
+        if (loopAudioSource == null)
+        {
+            return;
+        }
+
+        loopAudioSource.Stop();
+        loopAudioSource.clip = null;
     }
 }

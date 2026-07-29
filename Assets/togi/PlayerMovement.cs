@@ -48,6 +48,10 @@ public class PlayerMovement : MonoBehaviour
     [Header("フック")]
     [SerializeField] private HookShotController hookShotController;
 
+    
+
+    private float footstepTimer;
+
     private CharacterController characterController;
     private PlayerInput playerInput;
 

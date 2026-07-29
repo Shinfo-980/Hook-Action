@@ -12,8 +12,11 @@ EditorBuildSettings:
     path: Assets/utibayasi/Scenes/GameScene_Test1.unity
     guid: b5824154d117021499652a3620ff434a
   - enabled: 1
-    path: Assets/togi/Scenes/togi.unity
+    path: Assets/togi/Scenes/jiji.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/togi/Scenes/togi.unity
+    guid: 8fc41761c94a79c4db48795000024cf2
   - enabled: 1
     path: Assets/togi/Scenes/ResultScene.unity
     guid: f6b11e3ffebc0594dbb7cf63c851b6bc

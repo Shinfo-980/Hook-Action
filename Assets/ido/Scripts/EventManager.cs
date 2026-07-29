@@ -8,12 +8,15 @@ public class EventManager : MonoBehaviour
     [SerializeField] private TimerManager timerManager;
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private ScoreManager scoreManager;
+    [SerializeField] private MissionUIManager missionUIManager;
 
     [Header("ミッションアイテム")]
     [SerializeField] private GameObject missionItemPrefab;
 
     [Tooltip("ミッションアイテムを出現させる4か所")]
-    [SerializeField] private Transform[] missionSpawnPoints = new Transform[4];
+    [SerializeField]
+    private Transform[] missionSpawnPoints =
+        new Transform[4];
 
     [Header("ミッション設定")]
     [SerializeField] private float missionTimeLimit = 50f;
@@ -35,45 +38,69 @@ public class EventManager : MonoBehaviour
     private Coroutine missionCoroutine;
     private Coroutine successBuffCoroutine;
     private Coroutine fogCoroutine;
+    private Coroutine scoreUpCoroutine;
 
     private int collectedItemCount;
     private bool isMissionActive;
 
-    public bool IsMissionActive => isMissionActive;
+    public bool IsMissionActive =>
+        isMissionActive;
+
+    public int CollectedItemCount =>
+        collectedItemCount;
+
+    public int RequiredItemCount =>
+        requiredItemCount;
 
     /// <summary>
-    /// ミッションイベント開始
+    /// ミッションイベント開始。
     /// </summary>
     public void missionEvent()
     {
         if (isMissionActive)
         {
-            Debug.LogWarning("ミッションはすでに実行中です。");
+            Debug.LogWarning(
+                "ミッションはすでに実行中です。"
+            );
+
             return;
         }
 
-        Debug.Log("ミッションイベント発生");
+        Debug.Log(
+            "ミッションイベント発生"
+        );
 
-        missionCoroutine = StartCoroutine(MissionSequence());
+        missionCoroutine =
+            StartCoroutine(
+                MissionSequence()
+            );
     }
 
     /// <summary>
-    /// スコアアップイベント
+    /// スコアアップイベント。
     /// </summary>
     public void scoreUp()
     {
-        Debug.Log("スコアアップイベント発生");
+        Debug.Log(
+            "スコアアップイベント発生"
+        );
 
-        if (successBuffCoroutine != null)
+        if (scoreUpCoroutine != null)
         {
-            StopCoroutine(successBuffCoroutine);
+            StopCoroutine(
+                scoreUpCoroutine
+            );
         }
 
-        successBuffCoroutine = StartCoroutine(
-            ScoreUpEventSequence(30f)
-        );
+        scoreUpCoroutine =
+            StartCoroutine(
+                ScoreUpEventSequence(30f)
+            );
     }
 
+    /// <summary>
+    /// ミッション全体の進行。
+    /// </summary>
     private IEnumerator MissionSequence()
     {
         isMissionActive = true;
@@ -81,30 +108,69 @@ public class EventManager : MonoBehaviour
 
         SpawnMissionItems();
 
+        if (missionUIManager != null)
+        {
+            missionUIManager.ShowMission(
+                requiredItemCount,
+                missionTimeLimit
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "Mission UI Managerが設定されていません。"
+            );
+        }
+
         Debug.Log(
-            $"ミッション開始：{missionTimeLimit}秒以内に" +
+            $"ミッション開始：" +
+            $"{missionTimeLimit}秒以内に" +
             $"{requiredItemCount}個回収してください。"
         );
 
-        float remainingTime = missionTimeLimit;
+        float remainingTime =
+            missionTimeLimit;
 
         while (remainingTime > 0f &&
                collectedItemCount < requiredItemCount)
         {
-            remainingTime -= Time.deltaTime;
+            remainingTime -=
+                Time.deltaTime;
+
+            remainingTime =
+                Mathf.Max(
+                    remainingTime,
+                    0f
+                );
+
+            if (missionUIManager != null)
+            {
+                missionUIManager.SetRemainingTime(
+                    remainingTime
+                );
+            }
+
             yield return null;
         }
 
         bool missionSucceeded =
-            collectedItemCount >= requiredItemCount;
+            collectedItemCount >=
+            requiredItemCount;
 
         isMissionActive = false;
 
         RemoveMissionItems();
 
+        if (missionUIManager != null)
+        {
+            missionUIManager.HideMission();
+        }
+
         if (missionSucceeded)
         {
-            Debug.Log("ミッション成功");
+            Debug.Log(
+                "ミッション成功"
+            );
 
             StartSuccessBuff();
         }
@@ -112,7 +178,8 @@ public class EventManager : MonoBehaviour
         {
             Debug.Log(
                 $"ミッション失敗：回収数 " +
-                $"{collectedItemCount}/{requiredItemCount}"
+                $"{collectedItemCount}/" +
+                $"{requiredItemCount}"
             );
 
             StartFogPenalty();
@@ -122,7 +189,7 @@ public class EventManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 4か所にミッションアイテムを生成
+    /// ミッションアイテムを生成する。
     /// </summary>
     private void SpawnMissionItems()
     {
@@ -147,7 +214,10 @@ public class EventManager : MonoBehaviour
             return;
         }
 
-        foreach (Transform spawnPoint in missionSpawnPoints)
+        foreach (
+            Transform spawnPoint
+            in missionSpawnPoints
+        )
         {
             if (spawnPoint == null)
             {
@@ -158,11 +228,12 @@ public class EventManager : MonoBehaviour
                 continue;
             }
 
-            GameObject spawnedItem = Instantiate(
-                missionItemPrefab,
-                spawnPoint.position,
-                spawnPoint.rotation
-            );
+            GameObject spawnedItem =
+                Instantiate(
+                    missionItemPrefab,
+                    spawnPoint.position,
+                    spawnPoint.rotation
+                );
 
             MissionItem missionItem =
                 spawnedItem.GetComponent<MissionItem>();
@@ -170,23 +241,33 @@ public class EventManager : MonoBehaviour
             if (missionItem == null)
             {
                 Debug.LogError(
-                    $"{spawnedItem.name}にMissionItemが付いていません。"
+                    $"{spawnedItem.name}に" +
+                    "MissionItemが付いていません。"
                 );
 
-                Destroy(spawnedItem);
+                Destroy(
+                    spawnedItem
+                );
+
                 continue;
             }
 
-            missionItem.Initialize(this);
+            missionItem.Initialize(
+                this
+            );
 
-            spawnedMissionItems.Add(spawnedItem);
+            spawnedMissionItems.Add(
+                spawnedItem
+            );
         }
     }
 
     /// <summary>
-    /// MissionItemから呼ばれる回収通知
+    /// MissionItemから呼ばれる回収通知。
     /// </summary>
-    public void CollectMissionItem(MissionItem missionItem)
+    public void CollectMissionItem(
+        MissionItem missionItem
+    )
     {
         if (!isMissionActive)
         {
@@ -195,6 +276,13 @@ public class EventManager : MonoBehaviour
 
         collectedItemCount++;
 
+        collectedItemCount =
+            Mathf.Clamp(
+                collectedItemCount,
+                0,
+                requiredItemCount
+            );
+
         if (missionItem != null)
         {
             spawnedMissionItems.Remove(
@@ -202,42 +290,84 @@ public class EventManager : MonoBehaviour
             );
         }
 
+        if (missionUIManager != null)
+        {
+            missionUIManager.SetItemCount(
+                collectedItemCount
+            );
+        }
+
         Debug.Log(
             $"ミッションアイテム回収：" +
-            $"{collectedItemCount}/{requiredItemCount}"
+            $"{collectedItemCount}/" +
+            $"{requiredItemCount}"
         );
     }
 
     /// <summary>
-    /// フィールドに残っているミッションアイテムを削除
+    /// 残っているミッションアイテムを削除する。
     /// </summary>
     private void RemoveMissionItems()
     {
-        foreach (GameObject item in spawnedMissionItems)
+        foreach (
+            GameObject item
+            in spawnedMissionItems
+        )
         {
             if (item != null)
             {
-                Destroy(item);
+                Destroy(
+                    item
+                );
             }
         }
 
         spawnedMissionItems.Clear();
     }
 
+    /// <summary>
+    /// 成功バフを開始する。
+    /// </summary>
     private void StartSuccessBuff()
     {
         if (successBuffCoroutine != null)
         {
-            StopCoroutine(successBuffCoroutine);
+            StopCoroutine(
+                successBuffCoroutine
+            );
+
+            successBuffCoroutine = null;
         }
 
-        successBuffCoroutine = StartCoroutine(
-            SuccessBuffSequence()
-        );
+        successBuffCoroutine =
+            StartCoroutine(
+                SuccessBuffSequence()
+            );
     }
 
+    /// <summary>
+    /// 成功パネル表示と成功バフの進行。
+    /// </summary>
     private IEnumerator SuccessBuffSequence()
     {
+        /*
+         * 成功パネルを表示する。
+         * 元のコードではこの呼び出しがなかった。
+         */
+        if (missionUIManager != null)
+        {
+            missionUIManager.ShowSuccess(
+                successBuffDuration
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "Mission UI Managerが設定されていないため、" +
+                "成功パネルを表示できません。"
+            );
+        }
+
         if (playerMovement != null)
         {
             playerMovement.SetMovementBuff(
@@ -260,9 +390,29 @@ public class EventManager : MonoBehaviour
             $"スコア×{scoreMultiplier}"
         );
 
-        yield return new WaitForSeconds(
-            successBuffDuration
-        );
+        float remainingTime =
+            successBuffDuration;
+
+        while (remainingTime > 0f)
+        {
+            remainingTime -=
+                Time.deltaTime;
+
+            remainingTime =
+                Mathf.Max(
+                    remainingTime,
+                    0f
+                );
+
+            if (missionUIManager != null)
+            {
+                missionUIManager.SetSuccessRemainingTime(
+                    remainingTime
+                );
+            }
+
+            yield return null;
+        }
 
         if (playerMovement != null)
         {
@@ -274,23 +424,41 @@ public class EventManager : MonoBehaviour
             scoreManager.ResetScoreMultiplier();
         }
 
-        Debug.Log("成功バフ終了");
+        if (missionUIManager != null)
+        {
+            missionUIManager.HideSuccess();
+        }
+
+        Debug.Log(
+            "成功バフ終了"
+        );
 
         successBuffCoroutine = null;
     }
 
+    /// <summary>
+    /// 失敗ペナルティを開始する。
+    /// </summary>
     private void StartFogPenalty()
     {
         if (fogCoroutine != null)
         {
-            StopCoroutine(fogCoroutine);
+            StopCoroutine(
+                fogCoroutine
+            );
+
+            fogCoroutine = null;
         }
 
-        fogCoroutine = StartCoroutine(
-            FogPenaltySequence()
-        );
+        fogCoroutine =
+            StartCoroutine(
+                FogPenaltySequence()
+            );
     }
 
+    /// <summary>
+    /// 失敗パネル表示と霧ペナルティの進行。
+    /// </summary>
     private IEnumerator FogPenaltySequence()
     {
         if (fogPanel != null)
@@ -298,44 +466,100 @@ public class EventManager : MonoBehaviour
             fogPanel.SetActive(true);
         }
 
+        if (missionUIManager != null)
+        {
+            missionUIManager.ShowFailure(
+                fogDuration
+            );
+        }
+
         Debug.Log(
             $"視界不良ペナルティ開始：{fogDuration}秒"
         );
 
-        yield return new WaitForSeconds(fogDuration);
+        float remainingTime =
+            fogDuration;
+
+        while (remainingTime > 0f)
+        {
+            remainingTime -=
+                Time.deltaTime;
+
+            remainingTime =
+                Mathf.Max(
+                    remainingTime,
+                    0f
+                );
+
+            if (missionUIManager != null)
+            {
+                missionUIManager.SetFailureRemainingTime(
+                    remainingTime
+                );
+            }
+
+            yield return null;
+        }
 
         if (fogPanel != null)
         {
             fogPanel.SetActive(false);
         }
 
-        Debug.Log("視界不良ペナルティ終了");
+        if (missionUIManager != null)
+        {
+            missionUIManager.HideFailure();
+        }
+
+        Debug.Log(
+            "視界不良ペナルティ終了"
+        );
 
         fogCoroutine = null;
     }
 
-    private IEnumerator ScoreUpEventSequence(float duration)
+    /// <summary>
+    /// 単独のスコアアップイベント。
+    /// </summary>
+    private IEnumerator ScoreUpEventSequence(
+        float duration
+    )
     {
         if (scoreManager != null)
         {
-            scoreManager.SetScoreMultiplier(2f);
+            scoreManager.SetScoreMultiplier(
+                2f
+            );
         }
 
-        yield return new WaitForSeconds(duration);
+        yield return new WaitForSeconds(
+            duration
+        );
 
         if (scoreManager != null)
         {
             scoreManager.ResetScoreMultiplier();
         }
 
-        Debug.Log("スコアアップイベント終了");
+        Debug.Log(
+            "スコアアップイベント終了"
+        );
 
-        successBuffCoroutine = null;
+        scoreUpCoroutine = null;
     }
 
     private void OnDisable()
     {
         RemoveMissionItems();
+
+        isMissionActive = false;
+
+        if (missionUIManager != null)
+        {
+            missionUIManager.HideMission();
+            missionUIManager.HideSuccess();
+            missionUIManager.HideFailure();
+        }
 
         if (fogPanel != null)
         {
