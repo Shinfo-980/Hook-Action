@@ -43,7 +43,7 @@ public class HookShotController : MonoBehaviour
     private InputAction hookFireAction;
 
     // R：Player引き寄せ
-    private InputAction hookPullAction;
+    //private InputAction hookPullAction;
 
     // WASD・左スティック
     private InputAction moveAction;
@@ -88,11 +88,11 @@ public class HookShotController : MonoBehaviour
                 true
             );
 
-        hookPullAction =
+        /*hookPullAction =
             playerInput.actions.FindAction(
                 "HookPull",
                 true
-            );
+            );*/
 
         moveAction =
             playerInput.actions.FindAction(
@@ -123,14 +123,14 @@ public class HookShotController : MonoBehaviour
     private void OnEnable()
     {
         hookFireAction?.Enable();
-        hookPullAction?.Enable();
+        //hookPullAction?.Enable();
         moveAction?.Enable();
     }
 
     private void OnDisable()
     {
         hookFireAction?.Disable();
-        hookPullAction?.Disable();
+        //hookPullAction?.Disable();
         moveAction?.Disable();
     }
 
@@ -144,9 +144,34 @@ public class HookShotController : MonoBehaviour
             MoveHookTip();
         }
 
-        if (isHookAttached)
+        /*if (isHookAttached)
         {
             HandleHookPullInput();
+        }*/
+
+        if (isHookAttached)
+        {
+            // 左クリックを押している間は
+            // 自動で引き寄せる
+            if (hookFireAction.IsPressed())
+            {
+                isPlayerPulling = true;
+                PullPlayer();
+            }
+            else
+            {
+                // 離したら慣性を付けて解除
+                if (isPlayerPulling &&
+                    playerMovement != null)
+                {
+                    playerMovement.SetHookMomentum(
+                        lastPullVelocity *
+                        momentumMultiplier
+                    );
+                }
+
+                ResetHook();
+            }
         }
 
         if (isHookFlying ||
@@ -163,8 +188,42 @@ public class HookShotController : MonoBehaviour
             return;
         }
 
+        // Rで巻き取っている間は、
+        // 現在の長さを新しい最大ロープ長として保存する
+        if (isPlayerPulling)
+        {
+            UpdateRopeLengthWhilePulling();
+        }
+
+        // 保存された最大長を超えないように補正
         LimitRopeLength();
+
         UpdateRope();
+    }
+
+    /// <summary>
+    /// 巻き取った分だけロープの最大長を短くする
+    /// </summary>
+    private void UpdateRopeLengthWhilePulling()
+    {
+        if (hookOrigin == null)
+        {
+            return;
+        }
+
+        float currentRopeLength =
+            Vector3.Distance(
+                hookOrigin.position,
+                hookTargetPosition
+            );
+
+        // ロープは短くなる方向にだけ更新する
+        // 一度巻き取った分が再び伸びることを防ぐ
+        attachedRopeLength =
+            Mathf.Min(
+                attachedRopeLength,
+                currentRopeLength
+            );
     }
 
     /// <summary>
@@ -226,7 +285,7 @@ public class HookShotController : MonoBehaviour
     /// Rを押している間だけPlayerを引き寄せる
     /// Rを離してもフックは解除しない
     /// </summary>
-    private void HandleHookPullInput()
+    /*private void HandleHookPullInput()
     {
         if (hookPullAction.IsPressed())
         {
@@ -252,7 +311,7 @@ public class HookShotController : MonoBehaviour
                 "巻き取り停止"
             );
         }
-    }
+    }*/
 
     /// <summary>
     /// フックを発射する

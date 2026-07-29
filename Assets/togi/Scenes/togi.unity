@@ -1456,6 +1456,7 @@ MonoBehaviour:
   groundedVelocity: -2
   momentumDrag: 5
   minimumMomentumSpeed: 0.1
+  hookMoveControl: 0.35
   cameraHolder: {fileID: 1547942549}
   mouseSensitivity: 0.15
   controllerSensitivity: 180
@@ -1486,14 +1487,16 @@ MonoBehaviour:
   hookableLayer:
     serializedVersion: 2
     m_Bits: 64
-  hookSpeed: 40
+  hookSpeed: 80
   hookArrivalDistance: 0.02
   initialPullSpeed: 12
   maxPullSpeed: 40
   pullAcceleration: 12
   stopDistanceFromWall: 1.2
   playerArrivalDistance: 0.1
-  momentumMultiplier: 1
+  hookMoveSpeed: 4
+  moveDeadZone: 0.1
+  momentumMultiplier: 1.4
 --- !u!1 &247262422
 GameObject:
   m_ObjectHideFlags: 0
@@ -4644,6 +4647,75 @@ MonoBehaviour:
   spawnTime: 3
   upgradeRemainingTime: 30
   timerManager: {fileID: 786285234}
+--- !u!1001 &863230738
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 6052690523377391354, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_Name
+      value: biru
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 6.2321105
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 6.2321105
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 6.2321105
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -47.623
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 4.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 89.914
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6391919979452173376, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: fd43cbc2e25ae2b4c9cc72295da83b99, type: 3}
 --- !u!1 &884714900
 GameObject:
   m_ObjectHideFlags: 0
@@ -9459,8 +9531,8 @@ Transform:
   m_GameObject: {fileID: 1881520153}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 15.0036, y: 0, z: -4.3883}
-  m_LocalScale: {x: 135.3491, y: 1, z: 121.94183}
+  m_LocalPosition: {x: 15.0036, y: -0, z: 42.7558}
+  m_LocalScale: {x: 135.3491, y: 1, z: 216.22726}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -10574,3 +10646,4 @@ SceneRoots:
   - {fileID: 1832398134}
   - {fileID: 561338237}
   - {fileID: 1848494275}
+  - {fileID: 863230738}

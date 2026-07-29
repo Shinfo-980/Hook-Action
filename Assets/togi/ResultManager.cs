@@ -26,6 +26,10 @@ public class ResultManager : MonoBehaviour
 
     private void Start()
     {
+        // リザルト画面ではマウスカーソルを表示する
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
         DisableAllPatterns();
 
         finalScore = ResultData.GetFinalScore();
